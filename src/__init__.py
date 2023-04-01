@@ -1,5 +1,4 @@
-from dcli.dcli import command, arg
-
+import dcli
 
 if __name__ == "__main__":
     pass
