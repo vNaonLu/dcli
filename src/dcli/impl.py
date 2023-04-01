@@ -4,7 +4,7 @@ from argparse import (
     HelpFormatter as _HelpFormatter
 )
 from typing import (
-    Callable as _Callable
+    Callable as _Callable, Any
 )
 
 _SUBCMD_SPECIFIER = "__sub_cmd_wrapper__"
@@ -28,7 +28,7 @@ class _CommandWrapper:
     Then calling |Command()| directly will invoke argpaser.parse_args() and pass return value into the origin function |Command(args)|.
     """
 
-    def __init__(self, fn: _Callable[[_Namespace], int],
+    def __init__(self, fn: _Callable[[_Namespace], Any],
                  parser: _ArgumentParser,
                  *,
                  parent=None,
@@ -47,7 +47,7 @@ class _CommandWrapper:
         else:
             return getattr(args, _SUBCMD_SPECIFIER)
 
-    def __call__(self, args=None, namespace=None) -> int:
+    def __call__(self, args=None, namespace=None) -> Any:
         _args = self._parser.parse_args(args, namespace)
         sub: _CommandWrapper = self.__getSubCommand(_args)
         if sub:
@@ -55,7 +55,7 @@ class _CommandWrapper:
         else:
             return self.__runImpl(_args)
 
-    def __runImpl(self, args: _Namespace) -> int:
+    def __runImpl(self, args: _Namespace) -> Any:
         if self._parent_cmd and isinstance(self._parent_cmd, _CommandWrapper):
             return self._parent_cmd.__runImpl(args)
         sub = self.__getSubCommand(args)
@@ -86,6 +86,23 @@ def arg(*name_or_flags: str,
         help=None,
         metavar=None,
         dest=None):
+    """Wrapper for add_argument.
+
+    Keyword Arguments:
+        - name_or_flags -- Either a name or a list of option strings, e.g. foo or -f, --foo
+        - action -- Specify how an argument should be handled
+        - nargs -- Number of times the argument can be used
+        - const -- Store a constant value
+        - default -- Default value used when an argument is not provided
+        - type -- Automatically convert an argument to the given type
+        - choices -- Limit values to a specific set of choices
+        - required -- Indicate whether an argument is required or optional
+        - help -- Help message for an argument
+        - metavar -- Alternate display name for the argument as shown in help
+        - dest -- Specify the attribute name used in the result namespace
+
+    See https://docs.python.org/3/library/argparse.html#the-add-argument-method for more information.
+    """
 
     kwarg = {}
     if action != None:
@@ -130,6 +147,30 @@ def command(name: str,
             add_help=True,
             allow_abbrev=True,
             exit_on_error=True):
+    """Decorator for parsing command line strings and running if necessary.
+
+    Keyword Arguments:
+        - name -- The name of the command
+        - args -- The arguments for this command
+        - parent -- The parent command, this one will be a subcommand of parent
+        - parents -- Parsers whose arguments should be copied into this one
+        - help -- The short help message for command
+        - need_sub -- Specifier whether this command requires subcommand
+        - skippable -- Specifier whether skip this one if subcommand triggered
+        - usage -- A usage message (default: auto-generated from arguments)
+        - description -- A description of what the program does
+        - epilog -- Text following the argument descriptions
+        - formatter_class -- HelpFormatter class for printing help messages
+        - prefix_chars -- Characters that prefix optional arguments
+        - fromfile_prefix_chars -- Characters that prefix files containing additional arguments
+        - argument_default -- The default value for all arguments
+        - conflict_handler -- String indicating how to handle conflicts
+        - add_help -- Add a -h/-help option
+        - allow_abbrev -- Allow long options to be abbreviated unambiguously
+        - exit_on_error -- Determines whether or not ArgumentParser exits with error info when an error occurs
+
+    See https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser for more information.
+    """
 
     assert isinstance(name, str), \
         f"invalid name for command: {name}"
@@ -142,42 +183,34 @@ def command(name: str,
 
     parents = [x._getParser() for x in parents]
 
-    def decorate(func):
+    parser_kwargs = {}
+    parser_kwargs["prog"] = name
+    parser_kwargs["usage"] = usage
+    parser_kwargs["description"] = description
+    parser_kwargs["epilog"] = epilog
+    parser_kwargs["formatter_class"] = formatter_class
+    parser_kwargs["prefix_chars"] = prefix_chars
+    parser_kwargs["fromfile_prefix_chars"] = fromfile_prefix_chars
+    parser_kwargs["argument_default"] = argument_default
+    parser_kwargs["conflict_handler"] = conflict_handler
+    parser_kwargs["add_help"] = add_help
+    parser_kwargs["allow_abbrev"] = allow_abbrev
+    parser_kwargs["exit_on_error"] = exit_on_error
+
+    def deorator(func):
         nonlocal name
         nonlocal args
         nonlocal parent
         nonlocal help
         nonlocal need_sub
         nonlocal skippable
-        nonlocal usage
-        nonlocal description
-        nonlocal epilog
-        nonlocal formatter_class
-        nonlocal prefix_chars
-        nonlocal fromfile_prefix_chars
-        nonlocal argument_default
-        nonlocal conflict_handler
-        nonlocal add_help
-        nonlocal allow_abbrev
-        nonlocal exit_on_error
+        nonlocal parser_kwargs
 
         cmd_wrapper: _CommandWrapper = None
 
         if parent == None:
             # root command condition.
-            raw_parser = _ArgumentParser(prog=name,
-                                         usage=usage,
-                                         description=description,
-                                         epilog=epilog,
-                                         parents=parents,
-                                         formatter_class=formatter_class,
-                                         prefix_chars=prefix_chars,
-                                         fromfile_prefix_chars=fromfile_prefix_chars,
-                                         argument_default=argument_default,
-                                         conflict_handler=conflict_handler,
-                                         add_help=add_help,
-                                         allow_abbrev=allow_abbrev,
-                                         exit_on_error=exit_on_error)
+            raw_parser = _ArgumentParser(**parser_kwargs)
 
             cmd_wrapper = _CommandWrapper(func, raw_parser,
                                           parent=None,
@@ -187,21 +220,7 @@ def command(name: str,
             # sub command condition.
             assert isinstance(parent, _CommandWrapper), \
                 f"invalid parent for command |{name}|."
-            sub_paresr = parent._addSubParser(name,
-                                              prog=name,
-                                              usage=usage,
-                                              help=help,
-                                              description=description,
-                                              epilog=epilog,
-                                              parents=parents,
-                                              formatter_class=formatter_class,
-                                              prefix_chars=prefix_chars,
-                                              fromfile_prefix_chars=fromfile_prefix_chars,
-                                              argument_default=argument_default,
-                                              conflict_handler=conflict_handler,
-                                              add_help=add_help,
-                                              allow_abbrev=allow_abbrev,
-                                              exit_on_error=exit_on_error)
+            sub_paresr = parent._addSubParser(name, help=help, **parser_kwargs)
 
             cmd_wrapper = _CommandWrapper(func, sub_paresr,
                                           parent=parent,
@@ -217,4 +236,4 @@ def command(name: str,
         assert cmd_wrapper != None, "something went wrong!"
         return cmd_wrapper
 
-    return decorate
+    return deorator
