@@ -7,6 +7,17 @@ from typing import (
     Callable as _Callable, Any
 )
 
+MAJOR_VERSION = 0
+MINOR_VERSION = 1
+PATCH_VERSION = 3
+
+VERSION = f"{MAJOR_VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+
+# public symbols
+__all__ = ["arg", "command"]
+__version__ = VERSION
+
+
 _SUBCMD_SPECIFIER = "__sub_cmd_wrapper__"
 
 
