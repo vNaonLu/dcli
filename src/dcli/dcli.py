@@ -9,7 +9,7 @@ from typing import (
 
 MAJOR_VERSION = 0
 MINOR_VERSION = 1
-PATCH_VERSION = 3
+PATCH_VERSION = 5
 
 VERSION = f"{MAJOR_VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
 
@@ -68,9 +68,11 @@ class _CommandWrapper:
 
     def __runImpl(self, args: _Namespace) -> Any:
         if self._parent_cmd and isinstance(self._parent_cmd, _CommandWrapper):
-            return self._parent_cmd.__runImpl(args)
+            self._parent_cmd.__runImpl(args)
         sub = self.__getSubCommand(args)
-        if not sub or not self._skip_if_has_subcmd:
+        if not sub:
+            return self._fn(args)
+        elif not self._skip_if_has_subcmd or self == sub:
             return self._fn(args)
 
     def _addSubParser(self, name: str, **kwargs) -> _ArgumentParser:

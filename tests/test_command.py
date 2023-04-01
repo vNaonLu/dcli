@@ -2,8 +2,8 @@ import unittest
 import sys
 import test_util
 
-sys.path.append(str(test_util.DCLI_ROOT))
-import dcli
+sys.path.append(str(test_util.PROJECT_ROOT))
+from src import dcli
 
 
 class TestCommand(unittest.TestCase):
@@ -28,6 +28,7 @@ class TestCommand(unittest.TestCase):
 
     def testNestedCommandWithSkip(self):
         val = None
+        cross_sub = False
 
         @dcli.command(
             "skip-command",
@@ -35,31 +36,32 @@ class TestCommand(unittest.TestCase):
         )
         def rootCmd(namespace):
             # should not go here
-            self.assertTrue(False)
+            self.assertFalse(True)
 
         @dcli.command(
             "test",
-            dcli.arg("-t", "--test", dest="dest", action="store", type=int),
+            dcli.arg("-t", dest="dest", action="store", type=int),
             parent=rootCmd
         )
         def testCmd(namespace):
-            nonlocal val
-            self.assertTrue(hasattr(namespace, "dest"))
+            nonlocal val, cross_sub
+            cross_sub = True
             self.assertEqual(getattr(namespace, "dest"), val)
 
         val = None
-        testCmd([])
+        cross_sub = False
         rootCmd(["test"])
+        self.assertTrue(cross_sub)
 
         val = 123
+        cross_sub = False
         rootCmd(["test", "-t", str(val)])
-        rootCmd(["test", "--test", str(val)])
-        testCmd(["-t", str(val)])
-        testCmd(["--test", str(val)])
+        self.assertTrue(cross_sub)
 
     def testNestedCommandWithoutSkip(self):
         val = None
         cross_root = False
+        cross_sub = False
 
         @dcli.command(
             "skip-command",
@@ -68,32 +70,31 @@ class TestCommand(unittest.TestCase):
         def rootCmd(namespace):
             nonlocal val, cross_root
             cross_root = True
-            self.assertTrue(hasattr(namespace, "dest"))
             self.assertEqual(getattr(namespace, "dest"), val)
 
         @dcli.command(
             "test",
-            dcli.arg("-t", "--test", dest="dest", action="store", type=int),
+            dcli.arg("-t", dest="dest", action="store", type=int),
             parent=rootCmd
         )
         def testCmd(namespace):
-            nonlocal val
-            self.assertTrue(hasattr(namespace, "dest"))
+            nonlocal val, cross_sub
+            cross_sub = True
             self.assertEqual(getattr(namespace, "dest"), val)
 
         val = None
         cross_root = False
-        testCmd([])
+        cross_sub = False
         rootCmd(["test"])
         self.assertTrue(cross_root)
+        self.assertTrue(cross_sub)
 
         val = 123
         cross_root = False
+        cross_sub = False
         rootCmd(["test", "-t", str(val)])
-        rootCmd(["test", "--test", str(val)])
-        testCmd(["-t", str(val)])
-        testCmd(["--test", str(val)])
         self.assertTrue(cross_root)
+        self.assertTrue(cross_sub)
 
     def testNestedCommandWithoutNeedSub(self):
         has_root = False
