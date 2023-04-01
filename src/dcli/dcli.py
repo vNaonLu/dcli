@@ -86,17 +86,30 @@ def arg(*name_or_flags: str,
         help=None,
         metavar=None,
         dest=None):
-    return _ArgumentWrapper(*name_or_flags,
-                            action=action,
-                            nargs=nargs,
-                            const=const,
-                            default=default,
-                            type=type,
-                            choices=choices,
-                            required=required,
-                            help=help,
-                            metavar=metavar,
-                            dest=dest)
+
+    kwarg = {}
+    if action != None:
+        kwarg["action"] = action
+    if nargs != None:
+        kwarg["nargs"] = nargs
+    if const != None:
+        kwarg["const"] = const
+    if default != None:
+        kwarg["default"] = default
+    if type != None:
+        kwarg["type"] = type
+    if choices != None:
+        kwarg["choices"] = choices
+    if required != None:
+        kwarg["required"] = required
+    if help != None:
+        kwarg["help"] = help
+    if metavar != None:
+        kwarg["metavar"] = metavar
+    if dest != None:
+        kwarg["dest"] = dest
+
+    return _ArgumentWrapper(*name_or_flags, **kwarg)
 
 
 def command(name: str,
