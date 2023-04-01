@@ -1,5 +1,7 @@
 # dcli
 
+[![cicd](https://github.com/vNaonLu/dcli/actions/workflows/cicd.yml/badge.svg)](https://github.com/vNaonLu/dcli/actions)
+
 **dcli** is a nested functional-oriented cli (command line interface) python module. **dcli** does not require any other third-party module, it just wraps and encapsolutes [argparse](https://docs.python.org/3/library/argparse.html) in a decorator, i.e. `@dcli.command()`.
 
 ## Getting Started
