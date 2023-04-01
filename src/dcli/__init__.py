@@ -1,4 +1,4 @@
-from dcli.dcli import command, arg
+from .impl import command, arg
 
 
 if __name__ == "__main__":
