@@ -4,6 +4,12 @@
 
 **dcli** is a nested functional-oriented cli (command line interface) python module. **dcli** does not require any other third-party module, it just wraps and encapsolutes [argparse](https://docs.python.org/3/library/argparse.html) in a decorator, i.e. `@dcli.command()`.
 
+## Requirements
+
+While **dcli** does not require any third-party, it requires run in Python with specific versions.
+
+- above Python 3.9
+
 ## Getting Started
 
 To create our own command, just type following code:
