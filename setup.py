@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from src.dcli.version import VERSION
+from src.dcli import __version__
 from pathlib import Path
 
 PACKAGES = find_packages('src')
@@ -10,7 +10,7 @@ with Path("README.md").open("r", encoding="utf-8") as f:
 
 setup(
     name="decorator-cli",
-    version=VERSION,
+    version=__version__,
     license="MIT",
     author="Naon Lu",
     author_email="vnaonlu0101453@gmail.com",
