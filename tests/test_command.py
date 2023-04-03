@@ -8,6 +8,14 @@ from src import dcli
 
 class TestCommand(unittest.TestCase):
 
+    def testCommandName(self):
+        command_name = "test_command"
+        @dcli.command(command_name)
+        def MyCommand():
+            pass
+
+        self.assertEqual(str(MyCommand), command_name)
+
     def testCommandWrapper(self):
         val = None
         @dcli.command(

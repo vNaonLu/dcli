@@ -39,18 +39,23 @@ class _CommandWrapper:
     Then calling |Command()| directly will invoke argpaser.parse_args() and pass return value into the origin function |Command(args)|.
     """
 
-    def __init__(self, fn: _Callable[[_Namespace], Any],
+    def __init__(self, name: str,
+                 fn: _Callable[[_Namespace], Any],
                  parser: _ArgumentParser,
                  *,
                  parent=None,
                  required_subcmd: bool = True,
                  skip_if_has_subcmd: bool = True) -> None:
+        self._name = name
         self._fn = fn
         self._parser = parser
         self._subparsers = None
         self._parent_cmd = parent
         self._required_sub = required_subcmd
         self._skip_if_has_subcmd = skip_if_has_subcmd
+
+    def __str__(self) -> str:
+        return self._name
 
     def __getSubCommand(self, args: _Namespace):
         if not hasattr(args, _SUBCMD_SPECIFIER) or not isinstance(getattr(args, _SUBCMD_SPECIFIER), _CommandWrapper):
@@ -225,7 +230,9 @@ def command(name: str,
             # root command condition.
             raw_parser = _ArgumentParser(**parser_kwargs)
 
-            cmd_wrapper = _CommandWrapper(func, raw_parser,
+            cmd_wrapper = _CommandWrapper(name,
+                                          func,
+                                          raw_parser,
                                           parent=None,
                                           required_subcmd=need_sub,
                                           skip_if_has_subcmd=skippable)
@@ -235,7 +242,9 @@ def command(name: str,
                 f"invalid parent for command |{name}|."
             sub_paresr = parent._addSubParser(name, help=help, **parser_kwargs)
 
-            cmd_wrapper = _CommandWrapper(func, sub_paresr,
+            cmd_wrapper = _CommandWrapper(name,
+                                          func,
+                                          sub_paresr,
                                           parent=parent,
                                           required_subcmd=need_sub,
                                           skip_if_has_subcmd=skippable)
