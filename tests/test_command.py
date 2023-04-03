@@ -17,6 +17,23 @@ class TestCommand(unittest.TestCase):
 
         self.assertEqual(str(MyCommand), command_name)
 
+    def testReturnValue(self):
+        @dcli.command("bool-check",
+                      dcli.arg("-t", dest="val", default=False, action="store_true"))
+        def returnBool(ns):
+            return getattr(ns, "val")
+
+        self.assertFalse(returnBool([]))
+        self.assertTrue(returnBool(["-t"]))
+
+        @dcli.command("int-check",
+                      dcli.arg("-t", dest="val", default=0, type=int))
+        def returnInteger(ns):
+            return getattr(ns, "val")
+
+        self.assertEqual(returnInteger([]), 0)
+        self.assertEqual(returnInteger(["-t", "123"]), 123)
+
     def testCommandWrapper(self):
         val = None
 
