@@ -10,6 +10,7 @@ class TestCommand(unittest.TestCase):
 
     def testCommandName(self):
         command_name = "test_command"
+
         @dcli.command(command_name)
         def MyCommand():
             pass
@@ -18,6 +19,7 @@ class TestCommand(unittest.TestCase):
 
     def testCommandWrapper(self):
         val = None
+
         @dcli.command(
             "test-command",
             dcli.arg("-t", "--test", dest="dest", action="store", type=int),
@@ -143,5 +145,57 @@ class TestCommand(unittest.TestCase):
         test_val = 123
         rootCmd(["sub", "--test", str(test_val)])
 
+    def testManualAddSubCommandCheck(self):
+        @dcli.command("root")
+        def MyCommand(_):
+            pass
+
+        @dcli.command("sub")
+        def SubCommand1(_):
+            pass
+
+        @dcli.command("sub")
+        def SubCommand2(_):
+            pass
+
+        self.assertRaises(AssertionError, MyCommand.addSubCommand, 123)
+        MyCommand.addSubCommand(SubCommand1)
+        # add a duplicate name of command is invalid.
+        self.assertRaises(AssertionError, MyCommand.addSubCommand, SubCommand2)
+
+    def testManualAddSubCommand(self):
+        cross_sub1 = False
+        cross_sub2 = False
+
+        @dcli.command("root")
+        def MyCommand(_):
+            pass
+
+        @dcli.command("sub1")
+        def SubCommand1(_):
+            nonlocal cross_sub1
+            cross_sub1 = True
+
+        @dcli.command("sub2")
+        def SubCommand2(_):
+            nonlocal cross_sub2
+            cross_sub2 = True
+
+        MyCommand.addSubCommand(SubCommand1)
+        MyCommand.addSubCommand(SubCommand2)
+
+        cross_sub1 = False
+        cross_sub2 = False
+        MyCommand(["sub1"])
+        self.assertTrue(cross_sub1)
+        self.assertFalse(cross_sub2)
+
+        cross_sub1 = False
+        cross_sub2 = False
+        MyCommand(["sub2"])
+        self.assertFalse(cross_sub1)
+        self.assertTrue(cross_sub2)
+
+
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()

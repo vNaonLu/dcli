@@ -45,14 +45,19 @@ class _CommandWrapper:
                  *,
                  parent=None,
                  required_subcmd: bool = True,
-                 skip_if_has_subcmd: bool = True) -> None:
+                 skip_if_has_subcmd: bool = True,
+                 help: str = "",
+                 kwargs = None) -> None:
         self._name = name
         self._fn = fn
         self._parser = parser
         self._subparsers = None
+        self._subcommands: dict[str, _CommandWrapper] = {}
         self._parent_cmd = parent
         self._required_sub = required_subcmd
         self._skip_if_has_subcmd = skip_if_has_subcmd
+        self._brief_help = help
+        self._kwargs = kwargs
 
     def __str__(self) -> str:
         return self._name
@@ -80,17 +85,52 @@ class _CommandWrapper:
         elif not self._skip_if_has_subcmd or self == sub:
             return self._fn(args)
 
-    def _addSubParser(self, name: str, **kwargs) -> _ArgumentParser:
+    def _addSubCommand(self, *,
+                       name: str,
+                       func: _Callable[[_Namespace], Any],
+                       need_sub,
+                       help,
+                       skippable,
+                       **kwargs) -> _ArgumentParser:
+        assert name not in self._subcommands, \
+            f"add sub-command with duplicate name |{name}|."
         if self._subparsers == None:
             self._subparsers = self._getParser().add_subparsers()
         self._subparsers.required = self._required_sub
-        return self._subparsers.add_parser(name, **kwargs)
+
+        result = _CommandWrapper(name,
+                                 func,
+                                 self._subparsers.add_parser(name,
+                                                             help=help,
+                                                             **kwargs),
+                                 parent=self,
+                                 required_subcmd=need_sub,
+                                 skip_if_has_subcmd=skippable,
+                                 help=help,
+                                 kwargs=kwargs)
+
+        result._getParser().set_defaults(**{_SUBCMD_SPECIFIER: result})
+
+        self._subcommands[name] = result
+
+        return result
 
     def _getParser(self) -> _ArgumentParser:
         return self._parser
 
     def _addArgument(self, arg: _ArgumentWrapper):
         self._getParser().add_argument(*arg.args, **arg.kwargs)
+
+    def addSubCommand(self, cmd):
+        assert isinstance(cmd, _CommandWrapper), \
+            f"add invalid sub-command |{cmd}|."
+
+        self._addSubCommand(name=cmd._name,
+                            func=cmd._fn,
+                            need_sub=cmd._required_sub,
+                            help=cmd._brief_help,
+                            skippable=cmd._skip_if_has_subcmd,
+                            **cmd._kwargs)
 
 
 def arg(*name_or_flags: str,
@@ -235,21 +275,19 @@ def command(name: str,
                                           raw_parser,
                                           parent=None,
                                           required_subcmd=need_sub,
-                                          skip_if_has_subcmd=skippable)
+                                          skip_if_has_subcmd=skippable,
+                                          help=help,
+                                          kwargs=parser_kwargs)
         else:
             # sub command condition.
             assert isinstance(parent, _CommandWrapper), \
                 f"invalid parent for command |{name}|."
-            sub_paresr = parent._addSubParser(name, help=help, **parser_kwargs)
-
-            cmd_wrapper = _CommandWrapper(name,
-                                          func,
-                                          sub_paresr,
-                                          parent=parent,
-                                          required_subcmd=need_sub,
-                                          skip_if_has_subcmd=skippable)
-
-            sub_paresr.set_defaults(**{_SUBCMD_SPECIFIER: cmd_wrapper})
+            cmd_wrapper = parent._addSubCommand(name=name,
+                                                func=func,
+                                                need_sub=need_sub,
+                                                skippable=skippable,
+                                                help=help,
+                                                **parser_kwargs)
 
         # add arguments
         for arg in args:
