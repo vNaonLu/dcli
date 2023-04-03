@@ -3,7 +3,10 @@ name: CICD
 on:
   push:
     tags:
-      - v*
+      - 0.*
+
+    branches:
+      - main
 
   pull_request:
     branches:
@@ -48,25 +51,3 @@ jobs:
           skip_existing: true
           verbose: true
           password: ${{ secrets.PYPI_UPLOAD_TOKEN }}
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: decorator-cli-${{ github.ref_name }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_paths: ./dist/decorator-cli-${{ github.ref_name }}.tar.gz
-          asset_name: decorator-cli-${{ github.ref_name }}.tar.gz
-          asset_content_type: application/gzip
