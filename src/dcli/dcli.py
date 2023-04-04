@@ -9,7 +9,7 @@ from typing import (
 
 MAJOR_VERSION = 0
 MINOR_VERSION = 1
-PATCH_VERSION = 6
+PATCH_VERSION = 7
 
 VERSION = f"{MAJOR_VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
 
@@ -47,6 +47,7 @@ class _CommandWrapper:
                  required_subcmd: bool = True,
                  skip_if_has_subcmd: bool = True,
                  help: str = "",
+                 args = None,
                  kwargs = None) -> None:
         self._name = name
         self._fn = fn
@@ -57,6 +58,7 @@ class _CommandWrapper:
         self._required_sub = required_subcmd
         self._skip_if_has_subcmd = skip_if_has_subcmd
         self._brief_help = help
+        self._args = args
         self._kwargs = kwargs
 
     def __str__(self) -> str:
@@ -91,6 +93,7 @@ class _CommandWrapper:
                        need_sub,
                        help,
                        skippable,
+                       args,
                        **kwargs) -> _ArgumentParser:
         assert name not in self._subcommands, \
             f"add sub-command with duplicate name |{name}|."
@@ -107,9 +110,14 @@ class _CommandWrapper:
                                  required_subcmd=need_sub,
                                  skip_if_has_subcmd=skippable,
                                  help=help,
+                                 args=args,
                                  kwargs=kwargs)
 
         result._getParser().set_defaults(**{_SUBCMD_SPECIFIER: result})
+
+        for arg in args:
+            if isinstance(arg, _ArgumentWrapper):
+                result._getParser().add_argument(*arg.args, **arg.kwargs)
 
         self._subcommands[name] = result
 
@@ -130,6 +138,7 @@ class _CommandWrapper:
                             need_sub=cmd._required_sub,
                             help=cmd._brief_help,
                             skippable=cmd._skip_if_has_subcmd,
+                            args=cmd._args,
                             **cmd._kwargs)
 
 
@@ -277,7 +286,12 @@ def command(name: str,
                                           required_subcmd=need_sub,
                                           skip_if_has_subcmd=skippable,
                                           help=help,
+                                          args=args,
                                           kwargs=parser_kwargs)
+            # add arguments
+            for arg in args:
+                cmd_wrapper._addArgument(arg)
+
         else:
             # sub command condition.
             assert isinstance(parent, _CommandWrapper), \
@@ -287,11 +301,8 @@ def command(name: str,
                                                 need_sub=need_sub,
                                                 skippable=skippable,
                                                 help=help,
+                                                args=args,
                                                 **parser_kwargs)
-
-        # add arguments
-        for arg in args:
-            cmd_wrapper._addArgument(arg)
 
         assert cmd_wrapper != None, "something went wrong!"
         return cmd_wrapper

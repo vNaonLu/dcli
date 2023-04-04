@@ -17,6 +17,17 @@ class TestCommand(unittest.TestCase):
 
         self.assertEqual(str(MyCommand), command_name)
 
+    def testPositionalArgs(self):
+        @dcli.command(
+            "testPositionalArgs",
+            dcli.arg("hi", nargs="*")
+        )
+        def main(ns):
+            return getattr(ns, "hi")
+
+        self.assertEqual(main([]), [])
+        self.assertEqual(main(["123", "453"]), ["123", "453"])
+
     def testReturnValue(self):
         @dcli.command("bool-check",
                       dcli.arg("-t", dest="val", default=False, action="store_true"))
@@ -188,28 +199,37 @@ class TestCommand(unittest.TestCase):
         def MyCommand(_):
             pass
 
-        @dcli.command("sub1")
-        def SubCommand1(_):
+        @dcli.command(
+            "sub1",
+            dcli.arg("-f", dest="dest", default=False, action="store_true")
+        )
+        def SubCommand1(ns):
             nonlocal cross_sub1
             cross_sub1 = True
+            return getattr(ns, "dest")
 
-        @dcli.command("sub2")
-        def SubCommand2(_):
+        @dcli.command(
+            "sub2",
+            dcli.arg("-f", dest="dest", default=False, action="store_true")
+        )
+        def SubCommand2(ns):
             nonlocal cross_sub2
             cross_sub2 = True
+            return getattr(ns, "dest")
 
         MyCommand.addSubCommand(SubCommand1)
         MyCommand.addSubCommand(SubCommand2)
 
         cross_sub1 = False
         cross_sub2 = False
-        MyCommand(["sub1"])
+        self.assertTrue(MyCommand(["sub1", "-f"]))
         self.assertTrue(cross_sub1)
         self.assertFalse(cross_sub2)
 
         cross_sub1 = False
         cross_sub2 = False
         MyCommand(["sub2"])
+        self.assertTrue(MyCommand(["sub2", "-f"]))
         self.assertFalse(cross_sub1)
         self.assertTrue(cross_sub2)
 
