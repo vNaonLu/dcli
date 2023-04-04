@@ -8,7 +8,7 @@
 
 Before installing, see [Requirements](#requirements) to check the dependencies.
 
-See [Installation](#installation) to install **dcli** to your local environment and [Usage](#usage) for more information about how to use.
+See [Installation](#installation) to install **dcli** to your local environment and [Tutorial](#tutorial) for more information about how to use.
 
 
 ## Requirements
@@ -32,50 +32,126 @@ Package       Version
 decorator-cli <version>
 ```
 
-## Usage
+## Tutorial
 
-To create our own command, just type following code:
+To create our own command `MyCommand` via **dcli**
 
-```python
+``` python
+# my-command.py
 import dcli
-...
 
 @dcli.command(
-    "MyCommand",
-    dcli.arg(...),
-    dcli.arg(...),
-    ...
+  "MyCommand",
+  dcli.arg("-f", "--foo", dest="bar", default=False, action="store_true",
+           help="I am 'foo' identifier!"),
+  description="This is my command!"
 )
-def MyCommand(namespace):
-  ...
-
-...
-# call the command function directly to parse the arguments from program.
-MyCommand()
+def MyCommand(ns):
+  print("Hello World")
+  print("--foo", getattr(ns, "bar"))
 ```
 
-`namespace` which is of type [argparse.Namespace](https://docs.python.org/3/library/argparse.html#the-namespace-object) will be passed from [ArgumentParser.parse_args()](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.parse_args). We can directly call `MyCommand()` without any parameters to parse the program arguments and then the original function `MyCommand(namespace)` will be invoked once `parse_args()` done. For advanced usage, it is possible to pass parameter `args` into `MyCommand()` to parse custom arguments, e.g.
+The only paremeter `ns` in `MyCommand` is type of `argparse.Namespace`, and will be passed from `parse_args()`. See [Namespace](https://docs.python.org/3/library/argparse.html#argparse.Namespace) for more information.
 
-```python
-MyCommand('--baz')
-MyCommand(['-x', 'X'])
-MyCommand(['--foo', 'bar'])
-```
-
-**dcli** also support subcommand:
+`@dcli.command` encapsolutes the class `argparse.ArgumentParser`, and all parameters from `argparse.ArgumentParser` are available for `@dcli.command`, just note that the parameters should be passed as `kwargs`.
+ `dcli.arg()` just wraps the parameters from `argparse.ArgumentParser.add_argument()`, please see [add_argument()](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument) for more information about how to add argument. In addition, it is possible to add multiple `dcli.arg` in a single command `@dcli.command`. 
 
 ``` python
 @dcli.command(
-    "COMMAND_NAME",
-    dcli.arg(...),
-    dcli.arg(...),
-    ...,
-    parent=MyCommand
-)
-def SubCommand(namespace):
+  "SomeCommand"
+  dcli.arg("--foo", ...),
+  dcli.arg("--bar", ...),
+  dcli.arg("--baz", ...),
   ...
+)
+def SomeCommand(ns):
+  ...
+```
 
+Once we defined our command `MyCommand`, we can easily trigger our command by
+
+``` python
+# my-command.py
 MyCommand()
 ```
 
-The above code will make `SubCommand` be a subcommand in `MyCommand` and named in `COMMAND_NAME`. By calling `MyCommand(["COMMAND_NAME"])`, we can easily trigger `SubCommand(namespace)` and do what we want.
+``` sh
+# in shell
+# auto-generated help message.
+$ python3 path/to/my-command.py -h
+usage: MyCommand [-h] [-f]
+
+This is my command!
+
+options:
+  -h, --help  show this help message and exit
+  -f, --foo   I am 'foo' identifier!
+
+# pass some argument.
+$ python3 path/to/my-command.py -f
+Hello World
+--foo True
+```
+
+`MyCommand()` is a decorated function which combine `parse_args()` and pass the result into the user-defined function. For advanced usage, if we need to do some test for `MyCommand`, it is possible to pass an argument to it instead of a default value as `sys.argv`.
+
+``` python
+MyCommand("--foo")
+MyCommand([])
+MyCommand(["-x", "X"])
+MyCommand(["-foo", "bar"])
+```
+
+**dcli** also provides subcommand creation. There are two ways to define subcommand.
+
+- By decorated function
+
+    ``` python
+    # my-command.py
+    @dcli.command("sub1", parent=MyCommand,
+                  help="I am sub command #1.")
+    def SubCommand1(ns):
+      print("I am sub command #1.")
+    ```
+
+- By add manually
+
+    ``` python
+    # my-command.py
+    @dcli.command("sub2",
+                  help="I am sub command #2.")
+    def SubCommand2(ns):
+      print("I am sub command #2.")
+    ...
+    MyCommand.addSubCommand(SubCommand2)
+    ```
+
+And trigger `MyCommand` as usual.
+
+``` python
+# my-command.py
+MyCommand()
+```
+
+``` sh
+# in shell
+# auto-generated help message.
+$ python3 path/to/my-command.py -h
+usage: MyCommand [-h] {sub1,sub2} ...
+
+positional arguments:
+  {sub1,sub2}
+    sub1       I am sub command #1.
+    sub2       I am sub command #2.
+
+options:
+  -h, --help   show this help message and exit
+
+# trigger subcommand
+$ python3 path/to/my-command.py sub1
+I am sub command #1.
+$ python3 path/to/my-command.py sub2
+I am sub command #2.
+```
+
+It is possible to invoke `SubCommand1()` or `SubCommand2()` directly if you want to test them.
