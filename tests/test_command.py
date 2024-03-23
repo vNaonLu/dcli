@@ -27,6 +27,8 @@ class TestCommand(unittest.TestCase):
 
         self.assertEqual(main([]), [])
         self.assertEqual(main(["123", "453"]), ["123", "453"])
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "hi"), ["123", "453"])
 
     def testReturnValue(self):
         @dcli.command("bool-check",
@@ -36,6 +38,8 @@ class TestCommand(unittest.TestCase):
 
         self.assertFalse(returnBool([]))
         self.assertTrue(returnBool(["-t"]))
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "val"), True)
 
         @dcli.command("int-check",
                       dcli.arg("-t", dest="val", default=0, type=int))
@@ -44,6 +48,8 @@ class TestCommand(unittest.TestCase):
 
         self.assertEqual(returnInteger([]), 0)
         self.assertEqual(returnInteger(["-t", "123"]), 123)
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "val"), 123)
 
     def testCommandWrapper(self):
         val = None
@@ -59,10 +65,14 @@ class TestCommand(unittest.TestCase):
 
         val = None
         testCmd([])
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "dest"), val)
 
         val = 123
         testCmd(["-t", str(val)])
         testCmd(["--test", str(val)])
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "dest"), val)
 
     def testNestedCommandWithSkip(self):
         val = None
@@ -95,6 +105,8 @@ class TestCommand(unittest.TestCase):
         cross_sub = False
         rootCmd(["test", "-t", str(val)])
         self.assertTrue(cross_sub)
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "dest"), val)
 
     def testNestedCommandWithoutSkip(self):
         val = None
@@ -133,6 +145,8 @@ class TestCommand(unittest.TestCase):
         rootCmd(["test", "-t", str(val)])
         self.assertTrue(cross_root)
         self.assertTrue(cross_sub)
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "dest"), val)
 
     def testNestedCommandWithoutNeedSub(self):
         has_root = False
@@ -172,6 +186,8 @@ class TestCommand(unittest.TestCase):
         rootCmd(["sub"])
         test_val = 123
         rootCmd(["sub", "--test", str(test_val)])
+        args = dcli.commandLine()
+        self.assertEqual(getattr(args, "test"), test_val)
 
     def testManualAddSubCommandCheck(self):
         @dcli.command("root")

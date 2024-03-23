@@ -9,16 +9,22 @@ from typing import (
 
 MAJOR_VERSION = 0
 MINOR_VERSION = 1
-PATCH_VERSION = 7
+PATCH_VERSION = 8
 
 VERSION = f"{MAJOR_VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
 
 # public symbols
-__all__ = ["arg", "command"]
+__all__ = ["arg", "command", "commandLine"]
 __version__ = VERSION
 
 
 _SUBCMD_SPECIFIER = "__sub_cmd_wrapper__"
+_ARGS: _Namespace = None
+
+
+def commandLine() -> _Namespace:
+    global _ARGS
+    return _ARGS
 
 
 class _ArgumentWrapper:
@@ -71,12 +77,13 @@ class _CommandWrapper:
             return getattr(args, _SUBCMD_SPECIFIER)
 
     def __call__(self, args=None, namespace=None) -> Any:
-        _args = self._parser.parse_args(args, namespace)
-        sub: _CommandWrapper = self.__getSubCommand(_args)
+        global _ARGS
+        _ARGS = self._parser.parse_args(args, namespace)
+        sub: _CommandWrapper = self.__getSubCommand(_ARGS)
         if sub:
-            return sub.__runImpl(_args)
+            return sub.__runImpl(_ARGS)
         else:
-            return self.__runImpl(_args)
+            return self.__runImpl(_ARGS)
 
     def __runImpl(self, args: _Namespace) -> Any:
         if self._parent_cmd and isinstance(self._parent_cmd, _CommandWrapper):
